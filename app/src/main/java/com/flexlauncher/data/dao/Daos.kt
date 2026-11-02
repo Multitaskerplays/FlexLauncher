@@ -4,7 +4,6 @@ import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.flexlauncher.data.model.User
 import com.flexlauncher.data.model.AppInfo
-import com.flexlauncher.data.model.AppCategory
 import com.flexlauncher.data.model.LauncherSettings
 
 @Dao
@@ -39,23 +38,11 @@ interface AppDao {
     @Query("SELECT * FROM apps WHERE userId = :userId AND isHidden = 0 ORDER BY position ASC")
     fun getAppsForUser(userId: Long): LiveData<List<AppInfo>>
     
-    @Query("SELECT * FROM apps WHERE userId = :userId AND categoryId = :categoryId AND isHidden = 0")
-    fun getAppsByCategory(userId: Long, categoryId: Int): LiveData<List<AppInfo>>
-    
     @Query("SELECT * FROM apps WHERE userId = :userId")
     suspend fun getAppsForUserOnce(userId: Long): List<AppInfo>
 
     @Query("SELECT * FROM apps WHERE packageName = :packageName AND userId = :userId")
     suspend fun getApp(packageName: String, userId: Long): AppInfo?
-    
-    @Query("SELECT * FROM apps WHERE userId = :userId AND isFavorite = 1")
-    fun getFavoriteApps(userId: Long): LiveData<List<AppInfo>>
-    
-    @Query("SELECT * FROM apps WHERE userId = :userId ORDER BY lastUsed DESC LIMIT :limit")
-    fun getRecentApps(userId: Long, limit: Int): LiveData<List<AppInfo>>
-    
-    @Query("SELECT * FROM apps WHERE userId = :userId ORDER BY launchCount DESC LIMIT :limit")
-    fun getMostUsedApps(userId: Long, limit: Int): LiveData<List<AppInfo>>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertApp(app: AppInfo)
@@ -69,32 +56,8 @@ interface AppDao {
     @Delete
     suspend fun deleteApp(app: AppInfo)
     
-    @Query("DELETE FROM apps WHERE packageName = :packageName")
-    suspend fun deleteAppByPackage(packageName: String)
-    
     @Query("UPDATE apps SET lastUsed = :time, launchCount = launchCount + 1 WHERE packageName = :packageName AND userId = :userId")
     suspend fun updateAppUsage(packageName: String, userId: Long, time: Long)
-}
-
-@Dao
-interface CategoryDao {
-    @Query("SELECT * FROM categories WHERE userId = :userId ORDER BY position ASC")
-    fun getCategoriesForUser(userId: Long): LiveData<List<AppCategory>>
-    
-    @Query("SELECT * FROM categories WHERE id = :categoryId")
-    suspend fun getCategoryById(categoryId: Int): AppCategory?
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCategory(category: AppCategory): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCategories(categories: List<AppCategory>)
-    
-    @Update
-    suspend fun updateCategory(category: AppCategory)
-    
-    @Delete
-    suspend fun deleteCategory(category: AppCategory)
 }
 
 @Dao

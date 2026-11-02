@@ -1,5 +1,12 @@
 # FlexLauncher - Advanced Multi-User Android Launcher
 
+> **Status (Nov 2026, this fork).** Implemented: first-run setup (single profile, or
+> multiple profiles with passwords), the app grid with icons, launching apps, All Apps and
+> search, split screen (freeform engine), hide/uninstall, and three display settings.
+> Everything else in the feature list below is the original roadmap, not shipped code —
+> `docs/CODE_REVIEW.md` has an honest inventory and `docs/SPLIT_SCREEN.md` covers the split
+> engine. `lintDebug` is clean and the unit tests cover the split geometry.
+
 ## 🚀 Overview
 
 FlexLauncher is a feature-rich Android launcher with multi-user support, app cloning via Shizuku, and extensive customization options. Inspired by Smart Launcher's design philosophy but built from scratch with unique features.

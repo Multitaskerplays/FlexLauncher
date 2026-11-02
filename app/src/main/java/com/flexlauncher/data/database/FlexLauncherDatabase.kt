@@ -11,17 +11,15 @@ import com.flexlauncher.data.model.*
     entities = [
         User::class,
         AppInfo::class,
-        AppCategory::class,
         LauncherSettings::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class FlexLauncherDatabase : RoomDatabase() {
     
     abstract fun userDao(): UserDao
     abstract fun appDao(): AppDao
-    abstract fun categoryDao(): CategoryDao
     abstract fun settingsDao(): SettingsDao
     
     companion object {

@@ -11,40 +11,30 @@ data class AppInfo(
     val packageName: String,
     val appName: String,
     val userId: Long,
-    val categoryId: Int = 0,
     val isSystemApp: Boolean = false,
     val isHidden: Boolean = false,
-    val isCloned: Boolean = false,
-    val clonedFromPackage: String? = null,
     val position: Int = 0,
     val customLabel: String? = null,
     val lastUsed: Long = 0,
     val installTime: Long = 0,
     val launchCount: Int = 0,
-    val isFavorite: Boolean = false,
-    val color: Int? = null,
     @Ignore
     val icon: Drawable? = null
 ) {
+    /** Room needs a constructor that matches only the persisted columns. */
     constructor(
         packageName: String,
         appName: String,
         userId: Long,
-        categoryId: Int = 0,
-        isSystemApp: Boolean = false,
-        isHidden: Boolean = false,
-        isCloned: Boolean = false,
-        clonedFromPackage: String? = null,
-        position: Int = 0,
-        customLabel: String? = null,
-        lastUsed: Long = 0,
-        installTime: Long = 0,
-        launchCount: Int = 0,
-        isFavorite: Boolean = false,
-        color: Int? = null
+        isSystemApp: Boolean,
+        isHidden: Boolean,
+        position: Int,
+        customLabel: String?,
+        lastUsed: Long,
+        installTime: Long,
+        launchCount: Int
     ) : this(
-        packageName, appName, userId, categoryId, isSystemApp,
-        isHidden, isCloned, clonedFromPackage, position, customLabel,
-        lastUsed, installTime, launchCount, isFavorite, color, null
+        packageName, appName, userId, isSystemApp, isHidden,
+        position, customLabel, lastUsed, installTime, launchCount, null
     )
 }

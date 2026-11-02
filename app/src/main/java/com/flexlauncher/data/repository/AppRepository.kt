@@ -24,22 +24,6 @@ class AppRepository(
         return appDao.getAppsForUser(userId)
     }
     
-    fun getAppsByCategory(userId: Long, categoryId: Int): LiveData<List<AppInfo>> {
-        return appDao.getAppsByCategory(userId, categoryId)
-    }
-    
-    fun getFavoriteApps(userId: Long): LiveData<List<AppInfo>> {
-        return appDao.getFavoriteApps(userId)
-    }
-    
-    fun getRecentApps(userId: Long, limit: Int = 10): LiveData<List<AppInfo>> {
-        return appDao.getRecentApps(userId, limit)
-    }
-    
-    fun getMostUsedApps(userId: Long, limit: Int = 10): LiveData<List<AppInfo>> {
-        return appDao.getMostUsedApps(userId, limit)
-    }
-    
     suspend fun getApp(packageName: String, userId: Long): AppInfo? {
         return appDao.getApp(packageName, userId)
     }

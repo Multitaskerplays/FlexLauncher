@@ -12,9 +12,5 @@ data class User(
     val photoPath: String? = null,
     val isDefault: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    val lastAccessedAt: Long = System.currentTimeMillis(),
-    val themeId: Int = 0,
-    val accentColor: Int = 0xFF6200EE.toInt(),
-    val useBiometric: Boolean = false,
-    val iconPackPackageName: String? = null
+    val lastAccessedAt: Long = System.currentTimeMillis()
 )
