@@ -116,6 +116,21 @@ never checked. Split screen is the only feature that is genuinely complete.
 - Not verified live: install/uninstall resync — the box's package installer wedged
   during the test (installs hang, no package lands), so it needs a retry after a reboot.
 
+## Fixed in 1ae2041 (P2 batch)
+
+- Dependencies: glide, lottie, work-runtime, biometric, colorpicker, viewpager2,
+  preference and gson removed (0 imports). Unsigned release APK 6.1 MB → 4.7 MB.
+- Resources: 44 unused strings, 17 unused colours and the never-set badge drawable
+  removed — `UnusedResources` is now 0, lint warnings 108 → 43, errors 0.
+- Model: `AppCategory`/`CategoryDao`/`DefaultCategories` deleted (nothing referenced
+  them); `LauncherSettings` trimmed from 35 fields to the 6 that exist; `AppInfo` and
+  `User` lost their never-read columns. DB version 2 with destructive fallback
+  (pre-release fork; local data is wiped on upgrade).
+- `ShizukuManager` shell helper: 10 s timeout, process always destroyed.
+- CI: lint + tests + assembleDebug, artifact only; it no longer publishes a debug-signed
+  "release" on every push to main.
+- README: status block stating what ships, pointing at this review.
+
 ## Suggested order
 
 1. **P0 batch (small, high value):** fix the manifest class, add a password prompt on profile
