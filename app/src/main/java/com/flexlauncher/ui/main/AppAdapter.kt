@@ -12,6 +12,7 @@ import com.flexlauncher.R
 import com.flexlauncher.data.model.AppInfo
 
 class AppAdapter(
+    private val icons: AppIcons,
     private val onAppClick: (AppInfo) -> Unit,
     private val onAppLongClick: (AppInfo) -> Boolean
 ) : ListAdapter<AppInfo, AppAdapter.AppViewHolder>(AppDiffCallback()) {
@@ -33,7 +34,9 @@ class AppAdapter(
         
         fun bind(app: AppInfo) {
             labelView.text = app.customLabel ?: app.appName
-            iconView.setImageDrawable(app.icon)
+            // Rows come from Room, where the icon column does not exist (@Ignore), so the
+            // drawable has to be looked up here or every icon is blank.
+            iconView.setImageDrawable(app.icon ?: icons.iconFor(app.packageName))
             
             // Show notification badge if needed
             badgeView.visibility = View.GONE  // TODO: Implement notification badges

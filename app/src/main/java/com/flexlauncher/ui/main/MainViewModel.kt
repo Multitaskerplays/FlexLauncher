@@ -30,19 +30,47 @@ class MainViewModel(
     private fun loadCurrentUser() {
         viewModelScope.launch {
             val currentSettings = settingsDao.getSettingsOnce()
-            if (currentSettings != null && currentSettings.currentUserId != 0L) {
-                val user = userRepository.getUserById(currentSettings.currentUserId)
-                _currentUser.value = user
+            val user = if (currentSettings != null && currentSettings.currentUserId != 0L) {
+                userRepository.getUserById(currentSettings.currentUserId)
             } else {
-                val defaultUser = userRepository.getDefaultUser()
-                _currentUser.value = defaultUser
+                userRepository.getDefaultUser()
             }
+            _currentUser.value = user ?: createFallbackUser()
         }
     }
+
+    /**
+     * Home screen with no profile means no app rows, i.e. a blank launcher. Rather than show
+     * an empty grid, fall back to a default profile so the app list has somewhere to live.
+     */
+    private suspend fun createFallbackUser(): com.flexlauncher.data.model.User {
+        val id = userRepository.createUser(
+            name = "Default",
+            password = "",
+            photoPath = null,
+            isDefault = true
+        )
+        return userRepository.getUserById(id)
+            ?: throw IllegalStateException("could not create the default profile")
+    }
     
+    private var observedUserId: Long? = null
+    private var syncing = false
+
     fun loadAppsForUser(userId: Long) {
+        if (observedUserId == userId) return
+        observedUserId = userId
         appRepository.getAppsForUser(userId).observeForever { apps ->
             _apps.value = apps
+            // A fresh profile (created after setup) has no rows yet, which would leave the
+            // home screen empty. Populate it from the package manager the first time.
+            if (apps.isEmpty() && !syncing) {
+                syncing = true
+                viewModelScope.launch {
+                    appRepository.syncApps(userId)
+                    syncing = false
+                }
+            }
         }
     }
     

@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         
         // Setup RecyclerView for apps
         appAdapter = AppAdapter(
+            icons = AppIcons(this),
             onAppClick = { app ->
                 viewModel.launchApp(app.packageName)
             },
