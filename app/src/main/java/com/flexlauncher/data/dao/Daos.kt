@@ -12,6 +12,9 @@ interface UserDao {
     @Query("SELECT * FROM users ORDER BY name ASC")
     fun getAllUsers(): LiveData<List<User>>
     
+    @Query("SELECT * FROM users ORDER BY name ASC")
+    suspend fun getAllUsersOnce(): List<User>
+
     @Query("SELECT * FROM users WHERE id = :userId")
     suspend fun getUserById(userId: Long): User?
     

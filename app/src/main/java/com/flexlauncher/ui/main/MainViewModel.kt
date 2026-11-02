@@ -75,8 +75,14 @@ class MainViewModel(
     }
     
     fun launchApp(packageName: String) {
-        val userId = _currentUser.value?.id ?: return
-        appRepository.launchApp(packageName, userId)
+        // Launch even when no profile is known yet: returning silently here is what made
+        // taps on the home grid look dead.
+        appRepository.launchApp(packageName, _currentUser.value?.id ?: 0L)
+    }
+
+    fun recordLaunch(packageName: String) {
+        val userId = _currentUser.value?.id ?: 0L
+        viewModelScope.launch { appRepository.updateAppUsage(packageName, userId) }
     }
     
     fun handleSwipeUp() {

@@ -180,6 +180,7 @@ class AppRepository(
         try {
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(launchIntent)
                 // Update usage in background
                 kotlinx.coroutines.GlobalScope.launch {

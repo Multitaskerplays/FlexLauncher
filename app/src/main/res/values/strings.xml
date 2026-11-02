@@ -92,6 +92,11 @@
     <string name="edit">Edit</string>
 
     <!-- Split screen -->
+    <string name="no_apps_found">Nothing to launch here</string>
+    <string name="nothing_handles_that">No app on this device handles that</string>
+    <string name="no_profiles">No profiles yet</string>
+
+    <!-- Split screen -->
     <string name="split_screen">Split screen</string>
     <string name="split_title">Split screen</string>
     <string name="split_left_pane">Left pane</string>

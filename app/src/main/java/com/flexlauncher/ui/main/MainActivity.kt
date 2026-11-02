@@ -6,6 +6,8 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flexlauncher.FlexLauncherApp
@@ -95,16 +97,21 @@ class MainActivity : AppCompatActivity() {
         }
         
         // Setup click listeners
-        binding.appDrawerButton.setOnClickListener {
-            showAppDrawer()
+        binding.appDrawerButton.setOnClickListener { showApps(searchMode = false) }
+        binding.searchButton.setOnClickListener { showApps(searchMode = true) }
+        binding.userProfileButton.setOnClickListener { showUserProfile() }
+
+        // Dock shortcuts: resolve whatever the box ships for these intents, and say so when
+        // there is nothing installed rather than doing nothing at all.
+        binding.phoneButton.setOnClickListener { openIntent(Intent(Intent.ACTION_DIAL)) }
+        binding.messagesButton.setOnClickListener {
+            openIntent(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("sms:")))
         }
-        
-        binding.searchButton.setOnClickListener {
-            showSearch()
+        binding.browserButton.setOnClickListener {
+            openIntent(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com")))
         }
-        
-        binding.userProfileButton.setOnClickListener {
-            showUserProfile()
+        binding.cameraButton.setOnClickListener {
+            openIntent(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
         }
     }
     
@@ -112,16 +119,136 @@ class MainActivity : AppCompatActivity() {
         viewModel.loadAppsForUser(userId)
     }
     
-    private fun showAppDrawer() {
-        // TODO: Implement app drawer
+    /** Everything the package manager can launch, icon included. */
+    private fun launchables(): List<AppEntry> {
+        val pm = packageManager
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        @Suppress("DEPRECATION")
+        val resolved = pm.queryIntentActivities(intent, 0)
+        return resolved
+            .map { AppEntry(it.activityInfo.packageName, it.loadLabel(pm).toString(), it.loadIcon(pm)) }
+            .distinctBy { it.packageName }
+            .sortedBy { it.label.lowercase() }
     }
-    
-    private fun showSearch() {
-        // TODO: Implement search
+
+    /**
+     * One dialog serves both the dock's "all apps" icon and the search icon; [searchMode]
+     * just adds the filter box and puts the cursor in it.
+     */
+    private fun showApps(searchMode: Boolean) {
+        val entries = launchables()
+        if (entries.isEmpty()) {
+            toast(getString(R.string.no_apps_found))
+            return
+        }
+
+        val density = resources.displayMetrics.density
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(0, (8 * density).toInt(), 0, 0)
+        }
+        val adapter = AppListAdapter(this, entries)
+        val list = android.widget.ListView(this).apply { this.adapter = adapter }
+        val filter = android.widget.EditText(this).apply {
+            hint = getString(R.string.search_apps)
+            setSingleLine()
+            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), (8 * density).toInt())
+        }
+
+        if (searchMode) container.addView(filter)
+        container.addView(list)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(if (searchMode) R.string.search_apps else R.string.app_drawer)
+            .setView(container)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        list.setOnItemClickListener { _, _, position, _ ->
+            openPackage(adapter.item(position).packageName)
+            dialog.dismiss()
+        }
+        if (searchMode) {
+            filter.addTextChangedListener(object : android.text.TextWatcher {
+                override fun afterTextChanged(editable: android.text.Editable?) {
+                    adapter.filter(editable?.toString().orEmpty())
+                }
+
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            })
+        }
+
+        dialog.show()
+        if (searchMode) filter.requestFocus()
     }
-    
+
     private fun showUserProfile() {
-        // TODO: Implement user profile
+        val app = application as FlexLauncherApp
+        val current = viewModel.currentUser.value
+
+        lifecycleScope.launch {
+            val users = app.database.userDao().getAllUsersOnce()
+            if (users.isEmpty()) {
+                toast(getString(R.string.no_profiles))
+                return@launch
+            }
+
+            val labels = users.map { user ->
+                if (current != null && user.id == current.id) "\u2713 ${user.name}" else user.name
+            }.toTypedArray()
+
+            androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.manage_profiles)
+                .setItems(labels) { _, which ->
+                    val picked = users[which]
+                    if (current == null || picked.id != current.id) {
+                        switchProfile(picked.id)
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun switchProfile(userId: Long) {
+        val app = application as FlexLauncherApp
+        lifecycleScope.launch {
+            val dao = app.database.settingsDao()
+            val settings = dao.getSettingsOnce()
+                ?: com.flexlauncher.data.model.LauncherSettings()
+            dao.insertSettings(settings.copy(currentUserId = userId))
+            viewModel.loadAppsForUser(userId)
+        }
+    }
+
+    private fun openPackage(packageName: String) {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        if (intent == null) {
+            toast(getString(R.string.no_apps_found))
+            return
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            startActivity(intent)
+            viewModel.recordLaunch(packageName)
+        } catch (t: Throwable) {
+            toast(getString(R.string.no_apps_found))
+        }
+    }
+
+    private fun openIntent(intent: Intent) {
+        try {
+            startActivity(intent)
+        } catch (t: android.content.ActivityNotFoundException) {
+            toast(getString(R.string.nothing_handles_that))
+        } catch (t: Throwable) {
+            toast(getString(R.string.nothing_handles_that))
+        }
+    }
+
+    private fun toast(message: String) {
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
     }
     
     private fun showAppOptions(app: AppInfo) {
