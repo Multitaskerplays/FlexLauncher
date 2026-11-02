@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FlexLauncher</string>
+    
+    <!-- Setup -->
+    <string name="welcome_title">Welcome to FlexLauncher</string>
+    <string name="choose_mode">Choose Your Mode</string>
+    <string name="single_user_mode">Single User</string>
+    <string name="multi_user_mode">Multiple Users</string>
+    <string name="single_user_desc">Standard launcher experience</string>
+    <string name="multi_user_desc">Password-protected profiles for shared devices</string>
+    
+    <!-- Permissions -->
+    <string name="shizuku_required">Shizuku Required</string>
+    <string name="shizuku_description">FlexLauncher uses Shizuku for advanced features like app cloning</string>
+    <string name="request_shizuku">Request Permission</string>
+    
+    <!-- User Management -->
+    <string name="add_user">Add User</string>
+    <string name="user_name">Name</string>
+    <string name="user_password">Password</string>
+    <string name="manage_profiles">Manage Profiles</string>
+    
+    <!-- Main UI -->
+    <string name="search_apps">Search apps…</string>
+    <string name="app_drawer">All Apps</string>
+    
+    <!-- App Actions -->
+    <string name="open_app">Open</string>
+    <string name="app_info">App Info</string>
+    <string name="uninstall">Uninstall</string>
+    <string name="hide_app">Hide</string>
+    
+    <!-- Categories -->
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_show_clock">Show the clock</string>
+    <string name="settings_clock_24h">24-hour clock</string>
+    <string name="settings_show_labels">Show app names</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_not_implemented">Themes, icon packs, folders, widgets, backups and gesture remapping are not implemented yet.</string>
+    
+    <!-- Gestures -->
+    
+    <!-- Actions -->
+    
+    <!-- Messages -->
+    <string name="password_incorrect">Incorrect password</string>
+    <string name="unlock">Unlock</string>
+    
+    <!-- Common -->
+    <string name="continue_text">Continue</string>
+    <string name="finish">Finish</string>
+
+    <!-- Split screen -->
+    <string name="no_apps_found">Nothing to launch here</string>
+    <string name="nothing_handles_that">No app on this device handles that</string>
+    <string name="no_profiles">No profiles yet</string>
+    <string name="choose_profile">Choose a profile to continue</string>
+    <string name="open_profile_picker">Choose profile</string>
+
+    <!-- Split screen -->
+    <string name="split_screen">Split screen</string>
+    <string name="split_title">Split screen</string>
+    <string name="split_left_pane">Left pane</string>
+    <string name="split_right_pane">Right pane</string>
+    <string name="split_choose_app">Choose an app</string>
+    <string name="split_start">Start split</string>
+    <string name="split_swap">Swap</string>
+    <string name="split_ratio">Divider at %1$d px · %2$d%% of the panel</string>
+    <string name="split_repeat">Repeat last split</string>
+    <string name="split_pick_both">Pick an app for the left and right pane first</string>
+    <string name="split_failed">Could not start the split</string>
+    <string name="split_started">Split launched</string>
+    <string name="split_none">Not set</string>
+    <string name="split_advanced">Car geometry (app-area pixels)</string>
+    <string name="split_inset_hint">Bottom inset (px)</string>
+    <string name="split_overscan_hint">Overscan (px)</string>
+    <string name="split_reuse_hint">Panes that are already open keep their size; close the app to apply a new divider.</string>
+    <string name="split_hint">Two freeform windows at exact pixels. The stock vendor split is not used: its broadcast only reaches the stock launcher, so it cannot work while FlexLauncher is home.</string>
+</resources>
