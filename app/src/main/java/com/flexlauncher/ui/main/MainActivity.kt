@@ -25,13 +25,14 @@ class MainActivity : AppCompatActivity() {
 
     private var binding: ActivityMainBinding? = null
     private lateinit var viewModel: MainViewModel
-    private lateinit var gestureDetector: GestureDetector
+
     private lateinit var appAdapter: AppAdapter
 
     private var uiReady = false
     private var setupLaunched = false
     private var userSelectionLaunched = false
     private var lockOverlay: android.view.View? = null
+    private lateinit var gestures: GestureDetector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +60,7 @@ class MainActivity : AppCompatActivity() {
                 return@observe
             }
             ensureUi()
+            applyDisplaySettings(settings)
             applyProfileLock(settings)
             if (!settings.isMultiUserMode || settings.currentUserId != 0L) {
                 // Unlock / profile switch: the ViewModel resolved its user before the new
@@ -155,7 +157,28 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding!!.root)
 
-        gestureDetector = GestureDetector(this, GestureListener())
+        // A fling up while the grid is already at the top opens All Apps. The RecyclerView
+        // eats vertical swipes, so the gesture is observed in dispatchTouchEvent and only
+        // claimed when there is nothing left to scroll.
+        gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            private var startedAtTop = false
+
+            override fun onDown(e: MotionEvent): Boolean {
+                // Recorded on touch-down: by the time the fling fires the list has already
+                // scrolled, so asking then would always return false.
+                startedAtTop = gridAtTop()
+                return super.onDown(e)
+            }
+
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                val upward = e1 != null && e1.y - e2.y > SWIPE_THRESHOLD && abs(velocityY) > SWIPE_VELOCITY_THRESHOLD
+                if (upward && startedAtTop) {
+                    showApps(searchMode = false)
+                    return true
+                }
+                return false
+            }
+        })
 
         appAdapter = AppAdapter(
             icons = AppIcons(this),
@@ -187,6 +210,35 @@ class MainActivity : AppCompatActivity() {
         binding!!.cameraButton.setOnClickListener {
             openIntent(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
         }
+        binding!!.settingsButton.setOnClickListener {
+            startActivity(Intent(this, com.flexlauncher.ui.settings.SettingsActivity::class.java))
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (this::gestures.isInitialized && gestures.onTouchEvent(ev)) return true
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun gridAtTop(): Boolean {
+        val manager = binding?.appsRecyclerView?.layoutManager as? GridLayoutManager ?: return true
+        return manager.findFirstCompletelyVisibleItemPosition() <= 0
+    }
+
+    /** Applies the three display preferences the settings screen actually exposes. */
+    private fun applyDisplaySettings(settings: com.flexlauncher.data.model.LauncherSettings) {
+        val ui = binding ?: return
+
+        ui.clockWidget.visibility = if (settings.showClock) android.view.View.VISIBLE else android.view.View.GONE
+        // TextClock ignores the 12/24 preference on its own; force the pair it renders.
+        ui.timeText.format24Hour = "HH:mm"
+        ui.timeText.format12Hour = if (settings.clockFormat24h) "HH:mm" else "h:mm"
+        ui.dateText.text = java.text.SimpleDateFormat(
+            if (settings.clockFormat24h) "EEEE d MMMM" else "EEEE, d MMMM",
+            java.util.Locale.getDefault()
+        ).format(java.util.Date())
+
+        appAdapter.showLabels = settings.showAppLabels
     }
 
     /** Roughly 150 dp per tile, clamped to 4..8 columns. */
@@ -343,6 +395,11 @@ class MainActivity : AppCompatActivity() {
         if (prefs.hasSavedPair()) {
             actions += getString(R.string.split_repeat) to { repeatSplit() }
         }
+        actions += getString(R.string.hide_app) to {
+            viewModel.hideApp(app.packageName)
+            toast(getString(R.string.hide_app) + ": " + (app.customLabel ?: app.appName))
+        }
+        actions += getString(R.string.uninstall) to { viewModel.uninstallApp(app.packageName) }
         actions += getString(R.string.app_info) to { openAppInfo(app.packageName) }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
@@ -378,72 +435,9 @@ class MainActivity : AppCompatActivity() {
             // Nothing sensible to do; ignore.
         }
     }
-    
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        return if (gestureDetector.onTouchEvent(event)) {
-            true
-        } else {
-            super.onTouchEvent(event)
-        }
-    }
-    
-    private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
-        
-        private val SWIPE_THRESHOLD = 100
-        private val SWIPE_VELOCITY_THRESHOLD = 100
-        
-        override fun onFling(
-            e1: MotionEvent?,
-            e2: MotionEvent,
-            velocityX: Float,
-            velocityY: Float
-        ): Boolean {
-            if (e1 == null) return false
-            
-            val diffY = e2.y - e1.y
-            val diffX = e2.x - e1.x
-            
-            if (abs(diffY) > abs(diffX)) {
-                if (abs(diffY) > SWIPE_THRESHOLD && abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
-                    if (diffY > 0) {
-                        onSwipeDown()
-                    } else {
-                        onSwipeUp()
-                    }
-                    return true
-                }
-            } else {
-                if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-                    if (diffX > 0) {
-                        onSwipeRight()
-                    } else {
-                        onSwipeLeft()
-                    }
-                    return true
-                }
-            }
-            return false
-        }
-        
-        override fun onDoubleTap(e: MotionEvent): Boolean {
-            viewModel.handleDoubleTap()
-            return true
-        }
-    }
-    
-    private fun onSwipeUp() {
-        viewModel.handleSwipeUp()
-    }
-    
-    private fun onSwipeDown() {
-        viewModel.handleSwipeDown()
-    }
-    
-    private fun onSwipeLeft() {
-        viewModel.handleSwipeLeft()
-    }
-    
-    private fun onSwipeRight() {
-        viewModel.handleSwipeRight()
+
+    private companion object {
+        const val SWIPE_THRESHOLD = 100
+        const val SWIPE_VELOCITY_THRESHOLD = 100
     }
 }

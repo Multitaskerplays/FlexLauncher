@@ -27,20 +27,25 @@ class AppAdapter(
         holder.bind(getItem(position))
     }
     
+    /** Toggled from settings; hides the name under each icon. */
+    var showLabels: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
+
     inner class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val iconView: ImageView = itemView.findViewById(R.id.app_icon)
         private val labelView: TextView = itemView.findViewById(R.id.app_label)
-        private val badgeView: View = itemView.findViewById(R.id.notification_badge)
-        
         fun bind(app: AppInfo) {
             labelView.text = app.customLabel ?: app.appName
             // Rows come from Room, where the icon column does not exist (@Ignore), so the
             // drawable has to be looked up here or every icon is blank.
             iconView.setImageDrawable(app.icon ?: icons.iconFor(app.packageName))
-            
-            // Show notification badge if needed
-            badgeView.visibility = View.GONE  // TODO: Implement notification badges
-            
+            labelView.visibility = if (showLabels) View.VISIBLE else View.GONE
+
             itemView.setOnClickListener { onAppClick(app) }
             itemView.setOnLongClickListener { onAppLongClick(app) }
         }

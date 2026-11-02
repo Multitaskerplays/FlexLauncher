@@ -89,81 +89,25 @@ class AppRepository(
         val installedApps = loadInstalledApps(userId)
         appDao.insertApps(installedApps)
     }
-    
-    /**
-     * Clone an app using Shizuku
-     */
-    suspend fun cloneApp(packageName: String, userId: Long): Result<AppInfo> = withContext(Dispatchers.IO) {
-        try {
-            val result = shizukuManager.cloneApp(packageName, userId)
-            
-            if (result.isSuccess) {
-                val clonedPackageName = result.getOrNull() ?: return@withContext Result.failure(Exception("No package name returned"))
-                
-                // Get original app info
-                val originalApp = appDao.getApp(packageName, userId)
-                    ?: return@withContext Result.failure(Exception("Original app not found"))
-                
-                // Create cloned app entry
-                val clonedApp = originalApp.copy(
-                    packageName = clonedPackageName,
-                    isCloned = true,
-                    clonedFromPackage = packageName,
-                    customLabel = "${originalApp.appName} (Clone)"
-                )
-                
-                appDao.insertApp(clonedApp)
-                Result.success(clonedApp)
-            } else {
-                Result.failure(result.exceptionOrNull() ?: Exception("Unknown error"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    /** Drops rows for packages that are no longer installed. */
+    suspend fun pruneMissingApps(userId: Long) {
+        val installed = packageManager
+            .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            .map { it.activityInfo.packageName }
+            .toSet()
+        appDao.getAppsForUserOnce(userId)
+            .filterNot { it.packageName in installed }
+            .forEach { appDao.deleteApp(it) }
     }
     
     /**
-     * Remove a cloned app
-     */
-    suspend fun removeClonedApp(packageName: String, userId: Long): Result<Unit> {
-        return try {
-            val result = shizukuManager.removeClonedApp(packageName, userId)
-            if (result.isSuccess) {
-                appDao.deleteAppByPackage(packageName)
-            }
-            result
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    /**
-     * Toggle app favorite status
-     */
-    suspend fun toggleFavorite(packageName: String, userId: Long) {
-        val app = appDao.getApp(packageName, userId)
-        app?.let {
-            val updated = it.copy(isFavorite = !it.isFavorite)
-            appDao.updateApp(updated)
-        }
-    }
-    
-    /**
-     * Hide/unhide an app
+     * Hide/unhide an app in this launcher. Deliberately a launcher-local flag: `pm
+     * disable-user` would remove the app for everyone and needs Shizuku.
      */
     suspend fun toggleHidden(packageName: String, userId: Long) {
         val app = appDao.getApp(packageName, userId)
-        app?.let {
-            val updated = it.copy(isHidden = !it.isHidden)
-            appDao.updateApp(updated)
-            
-            // Use Shizuku to actually hide the app if needed
-            if (updated.isHidden) {
-                shizukuManager.hideApp(packageName)
-            } else {
-                shizukuManager.unhideApp(packageName)
-            }
-        }
+        app?.let { appDao.updateApp(it.copy(isHidden = !it.isHidden)) }
     }
     
     /**

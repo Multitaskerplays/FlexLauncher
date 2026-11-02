@@ -78,24 +78,6 @@
             android:exported="false"
             android:label="@string/settings" />
 
-        <!-- App Management Activity -->
-        <activity
-            android:name=".ui.appmanager.AppManagerActivity"
-            android:exported="false"
-            android:label="@string/manage_apps" />
-
-        <!-- Profile Management Activity -->
-        <activity
-            android:name=".ui.profile.ProfileManagerActivity"
-            android:exported="false"
-            android:label="@string/manage_profiles" />
-
-        <!-- Theme Customization Activity -->
-        <activity
-            android:name=".ui.theme.ThemeActivity"
-            android:exported="false"
-            android:label="@string/themes" />
-
         <!-- Boot Receiver -->
         <receiver
             android:name=".receivers.BootReceiver"
@@ -116,6 +98,7 @@
                 <action android:name="android.intent.action.PACKAGE_ADDED" />
                 <action android:name="android.intent.action.PACKAGE_REMOVED" />
                 <action android:name="android.intent.action.PACKAGE_CHANGED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>

@@ -42,6 +42,9 @@ interface AppDao {
     @Query("SELECT * FROM apps WHERE userId = :userId AND categoryId = :categoryId AND isHidden = 0")
     fun getAppsByCategory(userId: Long, categoryId: Int): LiveData<List<AppInfo>>
     
+    @Query("SELECT * FROM apps WHERE userId = :userId")
+    suspend fun getAppsForUserOnce(userId: Long): List<AppInfo>
+
     @Query("SELECT * FROM apps WHERE packageName = :packageName AND userId = :userId")
     suspend fun getApp(packageName: String, userId: Long): AppInfo?
     

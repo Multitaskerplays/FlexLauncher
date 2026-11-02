@@ -49,6 +49,11 @@
     
     <!-- Settings -->
     <string name="settings">Settings</string>
+    <string name="settings_show_clock">Show the clock</string>
+    <string name="settings_clock_24h">24-hour clock</string>
+    <string name="settings_show_labels">Show app names</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_not_implemented">Themes, icon packs, folders, widgets, backups and gesture remapping are not implemented yet.</string>
     <string name="appearance">Appearance</string>
     <string name="gestures">Gestures</string>
     <string name="backup">Backup &amp; Restore</string>

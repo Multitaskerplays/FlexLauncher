@@ -105,68 +105,20 @@ class MainViewModel(
         appRepository.launchApp(packageName, _currentUser.value?.id ?: 0L)
     }
 
+    fun hideApp(packageName: String) {
+        val userId = _currentUser.value?.id ?: 0L
+        viewModelScope.launch { appRepository.toggleHidden(packageName, userId) }
+    }
+
+    fun uninstallApp(packageName: String) {
+        appRepository.uninstallApp(packageName)
+    }
+
     fun recordLaunch(packageName: String) {
         val userId = _currentUser.value?.id ?: 0L
         viewModelScope.launch { appRepository.updateAppUsage(packageName, userId) }
     }
     
-    fun handleSwipeUp() {
-        // Open app drawer based on settings
-        settings.value?.let {
-            when (it.swipeUpAction) {
-                "app_drawer" -> {
-                    // TODO: Open app drawer
-                }
-                "search" -> {
-                    // TODO: Open search
-                }
-                "recent_apps" -> {
-                    // TODO: Show recent apps
-                }
-            }
-        }
-    }
-    
-    fun handleSwipeDown() {
-        settings.value?.let {
-            when (it.swipeDownAction) {
-                "notifications" -> {
-                    // TODO: Open notifications
-                }
-                "quick_settings" -> {
-                    // TODO: Open quick settings
-                }
-            }
-        }
-    }
-    
-    fun handleSwipeLeft() {
-        settings.value?.let {
-            when (it.swipeLeftAction) {
-                "widgets" -> {
-                    // TODO: Show widgets
-                }
-            }
-        }
-    }
-    
-    fun handleSwipeRight() {
-        settings.value?.let {
-            when (it.swipeRightAction) {
-                "widgets" -> {
-                    // TODO: Show widgets
-                }
-            }
-        }
-    }
-    
-    fun handleDoubleTap() {
-        settings.value?.let {
-            if (it.doubleTabToSleep) {
-                // TODO: Implement double tap to sleep
-            }
-        }
-    }
 }
 
 class MainViewModelFactory(
