@@ -102,6 +102,20 @@ never checked. Split screen is the only feature that is genuinely complete.
 - Verified on the box: lock → picker → wrong password (toast, stays locked) → correct
   password (grid as that profile).
 
+## Fixed in c289777 (P1 batch)
+
+- `PackageChangeReceiver` resyncs and prunes on install/replace/uninstall;
+  `BootReceiver` does the same at boot.
+- Real Settings screen (top-bar overflow) with show-clock / 24-hour / app-names
+  switches, applied live by the home screen; the three unreachable stub screens and
+  `PlaceholderActivity` are deleted, as is the fake `pm install-existing` "cloning".
+- Fling-up-at-top opens All Apps (recorded on touch-down so the scroll cannot defeat it);
+  the old launcher-wide detector never received the events.
+- Date line filled; long-press Hide/Uninstall; app labels can be hidden; the never-set
+  notification badge is removed.
+- Not verified live: install/uninstall resync — the box's package installer wedged
+  during the test (installs hang, no package lands), so it needs a retry after a reboot.
+
 ## Suggested order
 
 1. **P0 batch (small, high value):** fix the manifest class, add a password prompt on profile
