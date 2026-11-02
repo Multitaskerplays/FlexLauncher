@@ -9,6 +9,7 @@ import com.flexlauncher.data.dao.AppDao
 import com.flexlauncher.data.model.AppInfo
 import com.flexlauncher.shizuku.ShizukuManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppRepository(

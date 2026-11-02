@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import moe.shizuku.server.IShizukuService
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider
+import java.io.FileInputStream
 
 class ShizukuManager(private val context: Context) {
     
@@ -112,7 +114,7 @@ class ShizukuManager(private val context: Context) {
             }
             
             val command = "pm uninstall --user $userId $packageName"
-            executeShizukuCommand(command)
+            executeShizukuCommand(command).map { }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -128,7 +130,7 @@ class ShizukuManager(private val context: Context) {
             }
             
             val command = "pm disable-user --user 0 $packageName"
-            executeShizukuCommand(command)
+            executeShizukuCommand(command).map { }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -144,7 +146,7 @@ class ShizukuManager(private val context: Context) {
             }
             
             val command = "pm enable $packageName"
-            executeShizukuCommand(command)
+            executeShizukuCommand(command).map { }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -176,18 +178,31 @@ class ShizukuManager(private val context: Context) {
     }
     
     /**
+     * Run a raw shell command through Shizuku (shell UID), e.g. flipping a global setting
+     * that would otherwise need WRITE_SECURE_SETTINGS.
+     */
+    suspend fun runShell(command: String): Result<String> = executeShizukuCommand(command)
+
+    /**
      * Execute a shell command via Shizuku
      */
     private suspend fun executeShizukuCommand(command: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-            val output = process.inputStream.bufferedReader().use { it.readText() }
-            val error = process.errorStream.bufferedReader().use { it.readText() }
-            
+            // rikka.shizuku 13.1.5 has no Shizuku.newProcess(); go through the service
+            // interface, whose IRemoteProcess exposes the three streams as file descriptors.
+            val service = IShizukuService.Stub.asInterface(Shizuku.getBinder())
+                ?: return@withContext Result.failure(Exception("Shizuku service is not available"))
+            val process = service.newProcess(arrayOf("sh", "-c", command), null, null)
+                ?: return@withContext Result.failure(Exception("Shizuku could not start the command"))
+
+            val output = FileInputStream(process.inputStream.fileDescriptor)
+                .bufferedReader().use { it.readText() }
+            val error = FileInputStream(process.errorStream.fileDescriptor)
+                .bufferedReader().use { it.readText() }
             process.waitFor()
-            
-            if (error.isNotEmpty()) {
-                Result.failure(Exception(error))
+
+            if (error.isNotBlank()) {
+                Result.failure(Exception(error.trim()))
             } else {
                 Result.success(output)
             }

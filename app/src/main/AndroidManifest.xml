@@ -40,7 +40,6 @@
             android:name=".ui.main.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:stateNotAlwaysHidden="true"
             android:windowSoftInputMode="adjustPan"
             android:configChanges="orientation|screenSize|keyboardHidden">
             
