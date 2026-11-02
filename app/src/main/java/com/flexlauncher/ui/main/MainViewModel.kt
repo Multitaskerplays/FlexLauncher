@@ -65,6 +65,7 @@ class MainViewModel(
     private var appsLiveData: LiveData<List<AppInfo>>? = null
     private var appsObserver: Observer<List<AppInfo>>? = null
     private var syncing = false
+    private var prunedForUser = false
 
     fun loadAppsForUser(userId: Long) {
         if (observedUserId == userId) return
@@ -76,6 +77,15 @@ class MainViewModel(
         val live = appRepository.getAppsForUser(userId)
         val observer = Observer<List<AppInfo>> { apps ->
             _apps.value = apps
+            // Self-heal when a package was removed while the launcher was not running: the
+            // PACKAGE_REMOVED broadcast is not always delivered, but a stale row would keep
+            // showing an app that no longer exists.
+            if (!prunedForUser) {
+                prunedForUser = true
+                viewModelScope.launch {
+                    runCatching { appRepository.pruneMissingApps(userId) }
+                }
+            }
             // A fresh profile (created after setup) has no rows yet, which would leave the
             // home screen empty. Populate it from the package manager the first time.
             if (apps.isEmpty() && !syncing) {

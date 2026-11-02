@@ -27,6 +27,7 @@ class PackageChangeReceiver : BroadcastReceiver() {
             return
         }
 
+        Log.i(TAG, "broadcast $action for ${intent.data?.schemeSpecificPart}")
         val app = context.applicationContext as? FlexLauncherApp ?: return
         val changedPackage = intent.data?.schemeSpecificPart
         val pending = goAsync()

@@ -80,9 +80,12 @@ class AppRepository(
             .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
             .map { it.activityInfo.packageName }
             .toSet()
-        appDao.getAppsForUserOnce(userId)
-            .filterNot { it.packageName in installed }
-            .forEach { appDao.deleteApp(it) }
+        val missing = appDao.getAppsForUserOnce(userId).filterNot { it.packageName in installed }
+        missing.forEach { appDao.deleteApp(it) }
+        if (missing.isNotEmpty()) {
+            android.util.Log.i("FlexLauncher", "pruned ${missing.size} missing app(s): " +
+                missing.joinToString { it.packageName })
+        }
     }
     
     /**
