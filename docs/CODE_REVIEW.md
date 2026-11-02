@@ -91,6 +91,17 @@ never checked. Split screen is the only feature that is genuinely complete.
   test gate.
 - Manifest requests `QUERY_ALL_PACKAGES` and storage permissions that nothing uses.
 
+## Fixed in d5cfe1f (2026-11-02)
+
+- P0-1 … P0-7: manifest class moved to `ui.appmanager`, password prompt + PBKDF2 hashing
+  (legacy SHA-256 still verifies), `setupUI()` runs once, multi-user lock overlay instead of
+  the default-profile fallback, `refreshCurrentUser()` on settings change, observers removed
+  on switch/clear, `completeSetup()` preserves settings, `OnBackPressedCallback`, unused
+  wallpaper permissions dropped. `lintDebug` is now 0 errors.
+- Home grid: columns from screen width (8 on the car box), compact clock, 52 dp tiles.
+- Verified on the box: lock → picker → wrong password (toast, stays locked) → correct
+  password (grid as that profile).
+
 ## Suggested order
 
 1. **P0 batch (small, high value):** fix the manifest class, add a password prompt on profile
