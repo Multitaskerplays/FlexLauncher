@@ -45,7 +45,9 @@ class SetupViewModel(
     }
     
     suspend fun completeSetup(isMultiUserMode: Boolean) {
-        val settings = LauncherSettings(
+        // Preserve whatever is already stored; re-running setup used to reset every option.
+        val existing = settingsDao.getSettingsOnce() ?: LauncherSettings()
+        val settings = existing.copy(
             isMultiUserMode = isMultiUserMode,
             currentUserId = if (isMultiUserMode) 0L else {
                 userRepository.getDefaultUser()?.id ?: 0L

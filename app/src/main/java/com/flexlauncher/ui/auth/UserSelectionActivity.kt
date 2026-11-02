@@ -2,9 +2,14 @@ package com.flexlauncher.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
+import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.flexlauncher.FlexLauncherApp
@@ -12,17 +17,19 @@ import com.flexlauncher.R
 import com.flexlauncher.data.model.LauncherSettings
 import com.flexlauncher.data.model.User
 import com.flexlauncher.ui.main.MainActivity
+import com.flexlauncher.ui.setup.SetupActivity
 import kotlinx.coroutines.launch
 
 /**
- * Shown on the launcher when multi-user mode is on and no profile is selected yet.
+ * Profile picker shown when multi-user mode is on and no profile has been selected yet.
  *
- * Password prompts belong here eventually; for now a tap selects the profile. The launcher
- * is the caller, so this is a transient screen rather than an entry point.
+ * A profile created with a password is not opened until that password verifies; profiles
+ * without one (the default single-user profile) open directly.
  */
 class UserSelectionActivity : AppCompatActivity() {
 
     private lateinit var list: LinearLayout
+    private lateinit var emptyState: LinearLayout
     private val app: FlexLauncherApp get() = application as FlexLauncherApp
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,7 +55,27 @@ class UserSelectionActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
         }
-        root.addView(list, LinearLayout.LayoutParams(
+        root.addView(list)
+
+        emptyState = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            visibility = android.view.View.GONE
+        }
+        emptyState.addView(TextView(this).apply {
+            text = getString(R.string.no_profiles)
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(getColor(R.color.text_secondary))
+        })
+        emptyState.addView(Button(this).apply {
+            text = "Set up a profile"
+            setOnClickListener {
+                startActivity(Intent(this@UserSelectionActivity, SetupActivity::class.java))
+                finish()
+            }
+        })
+        root.addView(emptyState, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = padding })
@@ -60,20 +87,56 @@ class UserSelectionActivity : AppCompatActivity() {
 
     private fun bind(users: List<User>) {
         list.removeAllViews()
+        emptyState.visibility = if (users.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+
         val density = resources.displayMetrics.density
         users.forEach { user ->
             list.addView(TextView(this).apply {
-                text = user.name
+                text = if (user.passwordHash.isEmpty()) user.name else "\uD83D\uDD12 ${user.name}"
                 textSize = 18f
                 gravity = Gravity.CENTER
                 setPadding(0, (12 * density).toInt(), 0, (12 * density).toInt())
                 setTextColor(getColor(R.color.text_primary))
-                setOnClickListener { select(user) }
+                setOnClickListener { choose(user) }
             })
         }
     }
 
-    private fun select(user: User) {
+    /** Ask for the password when the profile has one, otherwise go straight in. */
+    private fun choose(user: User) {
+        if (user.passwordHash.isEmpty()) {
+            commitSelection(user)
+            return
+        }
+
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = getString(R.string.user_password)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(user.name)
+            .setView(input)
+            .setPositiveButton(R.string.unlock) { _, _ -> verify(user, input.text.toString()) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.show()
+    }
+
+    private fun verify(user: User, password: String) {
+        lifecycleScope.launch {
+            if (app.userRepository.verifyPassword(user.id, password)) {
+                commitSelection(user)
+            } else {
+                Toast.makeText(
+                    this@UserSelectionActivity,
+                    R.string.password_incorrect,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun commitSelection(user: User) {
         lifecycleScope.launch {
             val dao = app.database.settingsDao()
             val settings = dao.getSettingsOnce() ?: LauncherSettings()

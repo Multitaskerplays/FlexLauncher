@@ -1,4 +1,4 @@
-package com.flexlauncher.ui.settings
+package com.flexlauncher.ui.appmanager
 
 import com.flexlauncher.ui.common.PlaceholderActivity
 

@@ -24,12 +24,19 @@ class MainViewModel(
     val apps: LiveData<List<AppInfo>> = _apps
     
     init {
-        loadCurrentUser()
+        refreshCurrentUser()
     }
     
-    private fun loadCurrentUser() {
+    /** Re-reads the selected profile; call after settings change (e.g. unlock). */
+    fun refreshCurrentUser() {
         viewModelScope.launch {
             val currentSettings = settingsDao.getSettingsOnce()
+            if (currentSettings?.isMultiUserMode == true && currentSettings.currentUserId == 0L) {
+                // Multi-user mode with nothing selected: stay locked. Falling back to a
+                // "default" profile here would walk straight past the profile picker.
+                _currentUser.value = null
+                return@launch
+            }
             val user = if (currentSettings != null && currentSettings.currentUserId != 0L) {
                 userRepository.getUserById(currentSettings.currentUserId)
             } else {
@@ -55,23 +62,41 @@ class MainViewModel(
     }
     
     private var observedUserId: Long? = null
+    private var appsLiveData: LiveData<List<AppInfo>>? = null
+    private var appsObserver: Observer<List<AppInfo>>? = null
     private var syncing = false
 
     fun loadAppsForUser(userId: Long) {
         if (observedUserId == userId) return
         observedUserId = userId
-        appRepository.getAppsForUser(userId).observeForever { apps ->
+
+        // observeForever without removing the previous observer leaks one per profile.
+        appsObserver?.let { previous -> appsLiveData?.removeObserver(previous) }
+
+        val live = appRepository.getAppsForUser(userId)
+        val observer = Observer<List<AppInfo>> { apps ->
             _apps.value = apps
             // A fresh profile (created after setup) has no rows yet, which would leave the
             // home screen empty. Populate it from the package manager the first time.
             if (apps.isEmpty() && !syncing) {
                 syncing = true
                 viewModelScope.launch {
-                    appRepository.syncApps(userId)
-                    syncing = false
+                    try {
+                        appRepository.syncApps(userId)
+                    } finally {
+                        syncing = false
+                    }
                 }
             }
         }
+        appsLiveData = live
+        appsObserver = observer
+        live.observeForever(observer)
+    }
+
+    override fun onCleared() {
+        appsObserver?.let { appsLiveData?.removeObserver(it) }
+        super.onCleared()
     }
     
     fun launchApp(packageName: String) {

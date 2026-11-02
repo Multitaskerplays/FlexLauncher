@@ -22,15 +22,26 @@ import com.flexlauncher.ui.setup.SetupActivity
 import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
-    
-    private lateinit var binding: ActivityMainBinding
+
+    private var binding: ActivityMainBinding? = null
     private lateinit var viewModel: MainViewModel
     private lateinit var gestureDetector: GestureDetector
     private lateinit var appAdapter: AppAdapter
-    
+
+    private var uiReady = false
+    private var setupLaunched = false
+    private var userSelectionLaunched = false
+    private var lockOverlay: android.view.View? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // A launcher must not close on Back; keep the callback empty instead of overriding
+        // the deprecated onBackPressed().
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = Unit
+        })
+
         // Initialize ViewModel
         val factory = MainViewModelFactory(
             (application as FlexLauncherApp).database.settingsDao(),
@@ -38,83 +49,153 @@ class MainActivity : AppCompatActivity() {
             (application as FlexLauncherApp).appRepository
         )
         viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
-        
-        // Check if first launch
+
+        // Watch the settings only to decide *navigation* and to inflate the UI once. It used
+        // to call setupUI() on every emission, which re-inflated the layout and stacked a
+        // fresh currentUser observer each time a profile was switched.
         viewModel.settings.observe(this) { settings ->
             if (settings == null) {
-                // First launch - show setup
-                startActivity(Intent(this, SetupActivity::class.java))
-                finish()
+                launchSetupOnce()
                 return@observe
             }
-            
-            // Check if multi-user mode and no user selected
-            if (settings.isMultiUserMode && settings.currentUserId == 0L) {
-                startActivity(Intent(this, UserSelectionActivity::class.java))
-                return@observe
+            ensureUi()
+            applyProfileLock(settings)
+            if (!settings.isMultiUserMode || settings.currentUserId != 0L) {
+                // Unlock / profile switch: the ViewModel resolved its user before the new
+                // settings row existed, so ask it to re-read.
+                viewModel.refreshCurrentUser()
             }
-            
-            // Setup UI
-            setupUI()
+        }
+
+        viewModel.currentUser.observe(this) { user ->
+            val ui = binding ?: return@observe
+            user?.let {
+                ui.userNameText.text = it.name
+                viewModel.loadAppsForUser(it.id)
+            }
+        }
+
+        viewModel.apps.observe(this) { apps ->
+            if (uiReady) appAdapter.submitList(apps)
         }
     }
-    
-    private fun setupUI() {
+
+    /**
+     * In multi-user mode with no profile chosen the home screen must not show anyone's apps,
+     * so cover it until a profile is picked. Re-opening the picker is a tap on the overlay.
+     */
+    private fun applyProfileLock(settings: com.flexlauncher.data.model.LauncherSettings) {
+        val locked = settings.isMultiUserMode && settings.currentUserId == 0L
+        if (!locked) {
+            lockOverlay?.let { overlay ->
+                (overlay.parent as? android.view.ViewGroup)?.removeView(overlay)
+            }
+            lockOverlay = null
+            userSelectionLaunched = false
+            return
+        }
+
+        if (lockOverlay == null) {
+            val density = resources.displayMetrics.density
+            val overlay = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER
+                setBackgroundColor(getColor(R.color.background))
+                isClickable = true
+                elevation = 8 * density
+
+                addView(android.widget.TextView(this@MainActivity).apply {
+                    text = getString(R.string.choose_profile)
+                    textSize = 20f
+                    gravity = android.view.Gravity.CENTER
+                    setTextColor(getColor(R.color.text_primary))
+                    setPadding(0, 0, 0, (16 * density).toInt())
+                })
+                addView(android.widget.Button(this@MainActivity).apply {
+                    text = getString(R.string.open_profile_picker)
+                    setOnClickListener { openProfilePicker() }
+                })
+            }
+            (binding?.root as? android.view.ViewGroup)?.addView(
+                overlay,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            lockOverlay = overlay
+            openProfilePicker()
+        }
+    }
+
+    private fun openProfilePicker() {
+        if (userSelectionLaunched) return
+        userSelectionLaunched = true
+        startActivity(Intent(this, UserSelectionActivity::class.java))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Coming back from the picker (chosen or not) must leave the button tappable again;
+        // otherwise a dismissed picker left the overlay with a dead button.
+        userSelectionLaunched = false
+        viewModel.settings.value?.let { applyProfileLock(it) }
+    }
+
+    private fun launchSetupOnce() {
+        if (setupLaunched) return
+        setupLaunched = true
+        startActivity(Intent(this, SetupActivity::class.java))
+        finish()
+    }
+
+    /** Inflates the home screen exactly once, no matter how often settings change. */
+    private fun ensureUi() {
+        if (uiReady) return
+        uiReady = true
+
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        
-        // Setup gesture detector
+        setContentView(binding!!.root)
+
         gestureDetector = GestureDetector(this, GestureListener())
-        
-        // Setup RecyclerView for apps
+
         appAdapter = AppAdapter(
             icons = AppIcons(this),
-            onAppClick = { app ->
-                viewModel.launchApp(app.packageName)
-            },
+            onAppClick = { app -> viewModel.launchApp(app.packageName) },
             onAppLongClick = { app ->
                 showAppOptions(app)
                 true
             }
         )
-        
-        binding.appsRecyclerView.apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 4)
+
+        binding!!.appsRecyclerView.apply {
+            layoutManager = GridLayoutManager(this@MainActivity, gridColumns())
             adapter = appAdapter
         }
-        
-        // Observe current user
-        viewModel.currentUser.observe(this) { user ->
-            user?.let {
-                binding.userNameText.text = it.name
-                loadUserApps(it.id)
-            }
-        }
-        
-        // Observe apps
-        viewModel.apps.observe(this) { apps ->
-            appAdapter.submitList(apps)
-        }
-        
-        // Setup click listeners
-        binding.appDrawerButton.setOnClickListener { showApps(searchMode = false) }
-        binding.searchButton.setOnClickListener { showApps(searchMode = true) }
-        binding.userProfileButton.setOnClickListener { showUserProfile() }
+
+        binding!!.appDrawerButton.setOnClickListener { showApps(searchMode = false) }
+        binding!!.searchButton.setOnClickListener { showApps(searchMode = true) }
+        binding!!.userProfileButton.setOnClickListener { showUserProfile() }
 
         // Dock shortcuts: resolve whatever the box ships for these intents, and say so when
         // there is nothing installed rather than doing nothing at all.
-        binding.phoneButton.setOnClickListener { openIntent(Intent(Intent.ACTION_DIAL)) }
-        binding.messagesButton.setOnClickListener {
+        binding!!.phoneButton.setOnClickListener { openIntent(Intent(Intent.ACTION_DIAL)) }
+        binding!!.messagesButton.setOnClickListener {
             openIntent(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("sms:")))
         }
-        binding.browserButton.setOnClickListener {
+        binding!!.browserButton.setOnClickListener {
             openIntent(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com")))
         }
-        binding.cameraButton.setOnClickListener {
+        binding!!.cameraButton.setOnClickListener {
             openIntent(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
         }
     }
-    
+
+    /** Roughly 150 dp per tile, clamped to 4..8 columns. */
+    private fun gridColumns(): Int {
+        val dm = resources.displayMetrics
+        val widthDp = if (dm.density > 0f) dm.widthPixels / dm.density else 360f
+        return (widthDp / 150f).toInt().coerceIn(4, 8)
+    }
+
     private fun loadUserApps(userId: Long) {
         viewModel.loadAppsForUser(userId)
     }
@@ -304,11 +385,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             super.onTouchEvent(event)
         }
-    }
-    
-    override fun onBackPressed() {
-        // Prevent going back from launcher
-        // Do nothing or show home screen
     }
     
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {

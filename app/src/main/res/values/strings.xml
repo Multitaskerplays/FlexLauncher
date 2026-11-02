@@ -78,6 +78,7 @@
     <string name="clone_success">App cloned successfully</string>
     <string name="clone_failed">Failed to clone app</string>
     <string name="password_incorrect">Incorrect password</string>
+    <string name="unlock">Unlock</string>
     <string name="user_created">User created successfully</string>
     
     <!-- Common -->
@@ -95,6 +96,8 @@
     <string name="no_apps_found">Nothing to launch here</string>
     <string name="nothing_handles_that">No app on this device handles that</string>
     <string name="no_profiles">No profiles yet</string>
+    <string name="choose_profile">Choose a profile to continue</string>
+    <string name="open_profile_picker">Choose profile</string>
 
     <!-- Split screen -->
     <string name="split_screen">Split screen</string>
