@@ -11,6 +11,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.flexlauncher.FlexLauncherApp
 import com.flexlauncher.R
 import com.flexlauncher.databinding.ActivityMainBinding
+import com.flexlauncher.data.model.AppInfo
+import com.flexlauncher.split.SplitLauncher
+import com.flexlauncher.split.SplitPickerActivity
+import com.flexlauncher.split.SplitPrefs
 import com.flexlauncher.ui.auth.UserSelectionActivity
 import com.flexlauncher.ui.setup.SetupActivity
 import kotlin.math.abs
@@ -119,8 +123,51 @@ class MainActivity : AppCompatActivity() {
         // TODO: Implement user profile
     }
     
-    private fun showAppOptions(app: com.flexlauncher.data.model.AppInfo) {
-        // TODO: Show bottom sheet with app options
+    private fun showAppOptions(app: AppInfo) {
+        val prefs = SplitPrefs(this)
+        val actions = mutableListOf<Pair<String, () -> Unit>>()
+
+        actions += getString(R.string.open_app) to { viewModel.launchApp(app.packageName) }
+        actions += getString(R.string.split_screen) to {
+            startActivity(SplitPickerActivity.intent(this, app.packageName))
+        }
+        if (prefs.hasSavedPair()) {
+            actions += getString(R.string.split_repeat) to { repeatSplit() }
+        }
+        actions += getString(R.string.app_info) to { openAppInfo(app.packageName) }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(app.customLabel ?: app.appName)
+            .setItems(actions.map { it.first }.toTypedArray()) { _, which ->
+                actions[which].second.invoke()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun repeatSplit() {
+        SplitLauncher.repeatLast(this) { launched, message ->
+            if (!launched) {
+                android.widget.Toast.makeText(
+                    this,
+                    message ?: getString(R.string.split_failed),
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun openAppInfo(packageName: String) {
+        try {
+            startActivity(
+                android.content.Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.fromParts("package", packageName, null)
+                )
+            )
+        } catch (t: Throwable) {
+            // Nothing sensible to do; ignore.
+        }
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {

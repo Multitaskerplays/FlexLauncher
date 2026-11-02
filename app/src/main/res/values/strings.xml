@@ -90,4 +90,24 @@
     <string name="save">Save</string>
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
+
+    <!-- Split screen -->
+    <string name="split_screen">Split screen</string>
+    <string name="split_title">Split screen</string>
+    <string name="split_left_pane">Left pane</string>
+    <string name="split_right_pane">Right pane</string>
+    <string name="split_choose_app">Choose an app</string>
+    <string name="split_start">Start split</string>
+    <string name="split_swap">Swap</string>
+    <string name="split_ratio">Divider at %1$d px · %2$d%% of the panel</string>
+    <string name="split_repeat">Repeat last split</string>
+    <string name="split_pick_both">Pick an app for the left and right pane first</string>
+    <string name="split_failed">Could not start the split</string>
+    <string name="split_started">Split launched</string>
+    <string name="split_none">Not set</string>
+    <string name="split_advanced">Car geometry (app-area pixels)</string>
+    <string name="split_inset_hint">Bottom inset (px)</string>
+    <string name="split_overscan_hint">Overscan (px)</string>
+    <string name="split_reuse_hint">Panes that are already open keep their size; close the app to apply a new divider.</string>
+    <string name="split_hint">Two freeform windows at exact pixels. The stock vendor split is not used: its broadcast only reaches the stock launcher, so it cannot work while FlexLauncher is home.</string>
 </resources>

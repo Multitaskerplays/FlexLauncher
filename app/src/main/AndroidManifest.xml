@@ -20,6 +20,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     
+    <!-- Split screen: toggles the freeform support flag itself; Shizuku covers the
+         case where this grant is missing. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
     <!-- Shizuku permission -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
@@ -50,6 +55,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Split screen picker: two apps + divider, launched from an app long-press -->
+        <activity
+            android:name=".split.SplitPickerActivity"
+            android:exported="false"
+            android:label="@string/split_screen"
+            android:windowSoftInputMode="stateHidden" />
 
         <!-- Setup Activity (first launch) -->
         <activity

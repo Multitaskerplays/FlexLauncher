@@ -98,7 +98,15 @@ FlexLauncher is a feature-rich Android launcher with multi-user support, app clo
 - Floating dock option
 - Hidden dock (swipe to reveal)
 
-### 10. Backup & Restore
+### 10. Split Screen (implemented)
+- Any two apps side by side; divider set with a slider (40–90% of the display panel)
+- Pixel-exact pane bounds for car screens: bottom inset and overscan are configurable
+- Remembers the last pair, so a favourite split is one tap from any app's long-press menu
+- Works with FlexLauncher as the home screen — it does not rely on the vendor launcher
+- Engine: freeform windows. Details, prerequisites and the car geometry:
+  [docs/SPLIT_SCREEN.md](docs/SPLIT_SCREEN.md)
+
+### 11. Backup & Restore
 - Cloud backup (Google Drive)
 - Local backup
 - Export/import settings
@@ -236,6 +244,9 @@ FlexLauncher is a feature-rich Android launcher with multi-user support, app clo
 ### For Full Features
 - **Shizuku**: Required for app cloning and advanced features
 - **Storage Permission**: For backups and wallpapers
+- **Split Screen**: `WRITE_SECURE_SETTINGS` (grant once with
+  `adb shell pm grant com.flexlauncher android.permission.WRITE_SECURE_SETTINGS`) **or**
+  Shizuku, so the launcher can enable freeform windows
 - **Notification Access**: For notification badges
 - **Accessibility Service**: For gesture shortcuts (optional)
 
@@ -308,6 +319,17 @@ cd FlexLauncher
 3. Choose target user
 4. Wait for clone to complete
 5. Cloned app appears in user's app list
+
+### Split Screen
+1. Long-press any app on the home screen
+2. Choose **Split screen**
+3. Tap the left/right pane to pick apps, drag the divider, press **Start split**
+4. The pair and the divider are remembered; **Repeat last split** appears in the app menu
+
+Changing the divider only affects panes that are not already open — freeform bounds are
+applied when a window is created. The first run needs freeform support enabled: either the `WRITE_SECURE_SETTINGS` grant above
+or a running Shizuku. Windows are placed at exact pixels, so on a car screen tune the bottom
+inset and overscan until the pane edges sit flush with the projection area.
 
 ### Customization
 1. Long-press home screen

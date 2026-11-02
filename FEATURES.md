@@ -768,6 +768,17 @@
 
 ---
 
+## Split Screen (implemented)
+
+- Any two apps side by side as freeform windows
+- Divider 40–90% of the app area, pixel-exact pane bounds
+- Per-split bottom inset and overscan (car projection areas)
+- Remembers the last pair, one-tap repeat from the app long-press menu
+- No vendor launcher dependency; needs freeform support (WRITE_SECURE_SETTINGS or Shizuku)
+- See [docs/SPLIT_SCREEN.md](docs/SPLIT_SCREEN.md)
+
+---
+
 ## Future Features (Planned)
 
 - AI-powered app suggestions
